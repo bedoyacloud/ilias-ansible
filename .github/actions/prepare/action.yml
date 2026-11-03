@@ -39,3 +39,8 @@ runs:
         printf '%s\n' "$INVENTORY" > inventory/hosts.yml
         # Los secretos de GitHub hacen aqui el papel del Vault: no hay vault.yml en el repo
         printf '%s' "$VAULT_FILES" | base64 -d | tar -xz -C .
+        # El registro de una ejecucion es publico: se enmascaran IPs y dominios del inventario
+        # (GitHub solo enmascara las lineas completas del secreto, no sus valores sueltos).
+        grep -E '^[[:space:]]*(ansible_host|ilias_url|nginx_server_name|monitoring_domain):' inventory/hosts.yml \
+          | sed -E 's/^[^:]+:[[:space:]]*//; s#^https?://##; s/["'"'"']//g' | sort -u \
+          | while read -r v; do [ -n "$v" ] && echo "::add-mask::$v"; done
