@@ -1,5 +1,5 @@
 # {{ ansible_managed }}
-# Los dos servicios usan la red del servidor y escuchan SOLO en 127.0.0.1: no se abre ningun puerto publico.
+# Los dos servicios usan la red del servidor y escuchan SOLO en 127.0.0.1. Si hay dominio, nginx hace de proxy.
 services:
   prometheus:
     image: {{ monitoring_prometheus_image }}
@@ -29,6 +29,13 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+{% if monitoring_domain | length > 0 %}
+      GF_SERVER_DOMAIN: {{ monitoring_domain }}
+      GF_SERVER_ROOT_URL: https://{{ monitoring_domain }}/
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: lax
+{% endif %}
     volumes:
       - grafana-data:/var/lib/grafana
       - {{ monitoring_dir }}/grafana/provisioning:/etc/grafana/provisioning:ro

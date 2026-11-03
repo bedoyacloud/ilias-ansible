@@ -64,4 +64,5 @@ Recorrido completo en [2-ansible/README.md](docs/laboratorio-ilias/2-ansible/REA
 Guía: [3-monitorizacion/README.md](docs/laboratorio-ilias/3-monitorizacion/README.md).
 
 - [x] Prometheus y Grafana en un VPS, con node_exporter en cada servidor
-- [ ] Métricas de los servidores de AWS (pendiente de abrir el puerto 9100 en su security group)
+- [x] Métricas de los servidores de AWS (puerto 9100 abierto solo a la IP de Prometheus)
+- [x] Grafana público por dominio, con usuario y contraseña, HTTPS y freno de intentos

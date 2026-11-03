@@ -7,3 +7,5 @@ monitoring_grafana_admin_user: admin
 # Dashboard "Node Exporter Full" de grafana.com (id 1860), con la revision fijada
 monitoring_dashboard_id: 1860
 monitoring_dashboard_revision: 46
+# Dominio publico de Grafana (vacio = solo acceso por tunel SSH). Requiere nginx con TLS: reutiliza nginx_tls_cert y nginx_tls_key.
+monitoring_domain: ""

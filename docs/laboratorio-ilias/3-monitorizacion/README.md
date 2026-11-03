@@ -102,6 +102,38 @@ ansible-vault view inventory/host_vars/ilias-vps/vault.yml
 
 Dashboard: **Dashboards → Servidores → Node Exporter Full**, y el selector *Host* para elegir el servidor.
 
+## 6b. Acceso público por dominio (opcional)
+
+Si el servidor ya sirve sitios con HTTPS (aquí, con un certificado de origen de Cloudflare), Grafana puede publicarse en un subdominio
+**con usuario y contraseña**. Se activa con una variable en el inventario:
+
+```yaml
+ilias-vps:
+  monitoring_domain: grafana.ejemplo.com      # vacío = solo túnel SSH
+  nginx_tls: true                             # y nginx_tls_cert / nginx_tls_key, los mismos de ILIAS
+```
+
+```bash
+ansible-playbook playbooks/site.yml --tags monitoring --limit monitoring
+```
+
+El rol añade un virtual host de nginx que hace de proxy hacia `127.0.0.1:3000`. Grafana sigue escuchando solo en localhost.
+Con el DNS en Cloudflare, basta con que el nombre apunte al servidor (si ya hay un comodín `*` proxiado, no hay que crear nada).
+
+Qué protege un Grafana expuesto a internet:
+
+| Protección | Cómo |
+|---|---|
+| Solo HTTPS | HTTP redirige con 301; HSTS; cookies `Secure` |
+| Solo a través de Cloudflare | El firewall del servidor solo admite sus IPs, así que nadie llega directo a la IP |
+| Sin acceso anónimo ni registro | `GF_AUTH_ANONYMOUS_ENABLED=false`, `GF_USERS_ALLOW_SIGN_UP=false`. La API sin credenciales devuelve 401 |
+| Contraseña fuerte | Generada al azar, en el Vault, y no es `admin/admin` |
+| Freno de intentos | nginx limita `/login` a 10 por minuto y cliente (usando la IP real que informa Cloudflare), con respuesta 429; además Grafana bloquea por fuerza bruta |
+| Sin versión ni telemetría | `server_tokens off`, sin comprobación de actualizaciones ni analítica |
+
+Lo que **no** hay: doble factor de autenticación (Grafana OSS no lo trae). Para una exposición seria conviene poner delante
+Cloudflare Access (o un proveedor SSO como OAuth) en lugar de depender solo de la contraseña.
+
 ## 7. Comprobar
 
 Desde el servidor de monitorización:
@@ -128,7 +160,11 @@ En el propio Prometheus, `up{job="node"}` vale `1` por servidor si todo va bien.
 | Datasource y dashboard | Provisionados: *Prometheus* y *Node Exporter Full* |
 | Consulta Grafana → Prometheus | `200`, con datos reales |
 | Servidor de monitorización (consulta local) | `up=1` |
-| Servidores remotos de AWS | `up=0` hasta abrir el puerto 9100 en su *security group* (ver apartado 4) |
+| Servidores remotos de AWS | `up=0` mientras el *security group* filtraba el 9100; `up=1` en cuanto se abrió solo para la IP de Prometheus |
+| Los tres servidores en Grafana | `up=1` los tres. Consulta de memoria usada: 18 %, 44 % y 48 % (un valor por servidor) |
+| Acceso público por dominio | HTTP → HTTPS (301); `/login` 200; la API sin credenciales da 401; con credenciales 200 |
+| Freno de intentos en `/login` | 6 peticiones seguidas pasan y el resto recibe 429 |
+| Otros sitios del servidor | Siguen en 200 |
 
 ## 9. Problemas reales encontrados
 
@@ -144,5 +180,5 @@ En el propio Prometheus, `up{job="node"}` vale `1` por servidor si todo va bien.
 
 - **Alertas.** Hoy solo se *ven* las métricas. El siguiente paso son reglas de alerta (disco al 85 %, servidor caído) con Alertmanager o con las alertas de Grafana.
 - **Métricas de ILIAS.** node_exporter mide el servidor, no la aplicación. Para PHP-FPM, nginx o MariaDB harían falta sus exporters.
-- **Acceso por dominio.** El túnel SSH es lo más seguro para empezar. Con un subdominio y HTTPS (por ejemplo vía Cloudflare), el acceso sería más cómodo, pero expone un login a internet.
+- **Doble factor o SSO.** El acceso por dominio solo está protegido por usuario y contraseña (ver 6b). Cloudflare Access o un proveedor SSO añadiría una segunda barrera.
 - **Servidores sin IP fija.** Las IPs públicas de AWS cambian si la instancia se detiene y se arranca. En ese caso hay que usar una IP elástica o una VPN (WireGuard, Tailscale) entre los servidores.

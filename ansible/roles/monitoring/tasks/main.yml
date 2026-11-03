@@ -64,3 +64,31 @@
   community.docker.docker_compose_v2:
     project_src: "{{ monitoring_dir }}"
     state: present
+
+# --- Acceso publico por dominio (opcional): nginx como proxy de Grafana ---
+- name: Acceso publico a Grafana por dominio
+  when: monitoring_domain | length > 0
+  block:
+    - name: Instalar nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        cache_valid_time: 3600
+
+    - name: Virtual host de Grafana
+      ansible.builtin.template:
+        src: grafana-nginx.conf.j2
+        dest: /etc/nginx/sites-available/grafana
+        mode: "0644"
+      notify: Reload nginx for monitoring
+
+    - name: Activar el virtual host de Grafana
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/grafana
+        dest: /etc/nginx/sites-enabled/grafana
+        state: link
+      notify: Reload nginx for monitoring
+
+    - name: Validar la configuracion de nginx
+      ansible.builtin.command: nginx -t
+      changed_when: false
