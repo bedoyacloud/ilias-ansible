@@ -58,7 +58,10 @@ En la consola de AWS: **IAM → Policies → Create policy → JSON**, y pega es
         "ec2:AuthorizeSecurityGroupIngress",
         "ec2:RevokeSecurityGroupIngress"
       ],
-      "Resource": "arn:aws:ec2:REGION:CUENTA:security-group/sg-XXXX"
+      "Resource": [
+        "arn:aws:ec2:REGION:CUENTA:security-group/sg-XXXX",
+        "arn:aws:ec2:REGION:CUENTA:security-group-rule/*"
+      ]
     },
     {
       "Effect": "Allow",
@@ -68,6 +71,8 @@ En la consola de AWS: **IAM → Policies → Create policy → JSON**, y pega es
   ]
 }
 ```
+
+AWS evalúa estas dos acciones también sobre el recurso *regla* (`security-group-rule/*`), no solo sobre el security group: sin esa segunda línea falla con `UnauthorizedOperation`.
 
 Luego **IAM → Users → Create user** (`github-actions-ilias`), asígnale esa política, y en *Security credentials → Create access key*
 (caso de uso *Application running outside AWS*) copia las dos claves.
