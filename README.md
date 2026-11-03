@@ -54,5 +54,5 @@ Recorrido completo en [2-ansible/README.md](docs/laboratorio-ilias/2-ansible/REA
 - [x] A4. Comprobar y lint — [04-comprobar-y-lint.md](docs/laboratorio-ilias/2-ansible/04-comprobar-y-lint.md)
 - [x] A5. Plugins (addons de Surlabs; ejemplo GeoGebra) — [05-plugins.md](docs/laboratorio-ilias/2-ansible/05-plugins.md)
 - [x] A6. GitHub Actions: CI y deploy manual con aprobación — [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md)
-- [ ] A7. Prueba desde cero en un servidor nuevo (un solo comando)
+- [x] A7. Prueba desde cero en un servidor nuevo (un solo comando) — [07-prueba-desde-cero.md](docs/laboratorio-ilias/2-ansible/07-prueba-desde-cero.md)
 - [x] A8. Repo público sin datos personales ni secretos (ver la auditoría en [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md))

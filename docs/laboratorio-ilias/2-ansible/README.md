@@ -25,7 +25,7 @@ y entender qué hace cada pieza. El código vive en `ansible/` (en la raíz del 
 | Etapa | Qué | Para qué |
 |---|---|---|
 | **A6** | [GitHub Actions](06-github-actions.md): CI (lint, syntax-check) y deploy manual | Pipeline |
-| **A7** | Prueba desde cero en un servidor nuevo | Demostrar la reproducibilidad |
+| **A7** | [Prueba desde cero](07-prueba-desde-cero.md) en un servidor nuevo | Demostrar la reproducibilidad |
 | **A8** | Publicar en GitHub: limpiar datos propios, licencia, README de inicio rápido | Repo reutilizable |
 
 ## Estructura del código
