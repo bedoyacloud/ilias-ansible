@@ -163,7 +163,7 @@ jobs:
           SCHEME=${URL%%://*}; H=${URL#*://}; H=${H%%/*}; PORT=$([ "$SCHEME" = https ] && echo 443 || echo 80)
           SSH=(ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "ubuntu@$IP")
           CODE=$("${SSH[@]}" "curl -sL -k -o /dev/null -w '%{http_code}' --resolve '$H:$PORT:127.0.0.1' '$URL/login.php'")
-          echo "$HOST: $URL/login.php -> HTTP $CODE"
+          echo "Servidor $HOST: login.php -> HTTP $CODE"
           echo "Plugins registrados en ILIAS (id, activo, version):"
           "${SSH[@]}" "sudo mariadb ilias -N -e 'SELECT plugin_id, active, last_update_version FROM il_plugin'"
           [ "$CODE" = "200" ]
