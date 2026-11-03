@@ -7,7 +7,7 @@
 
 - name: Zona horaria UTC
   community.general.timezone:
-    name: UTC
+    name: Etc/UTC
 
 # --- Swap: el servidor de la PoC tiene 2 GB de RAM ---
 - name: Crear el fichero de swap
