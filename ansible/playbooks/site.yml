@@ -1,0 +1,12 @@
+---
+- name: ILIAS 11 (nginx + PHP-FPM + MariaDB)
+  hosts: ilias
+  become: true
+  roles:
+    - { role: base, tags: [base] }
+    - { role: php, tags: [php] }
+    - { role: mariadb, tags: [mariadb] }
+    - { role: ilias, tags: [ilias] }
+    - { role: nginx, tags: [nginx] }
+    - { role: ilias_plugins, tags: [plugins] }
+    - { role: ilias_maintenance, tags: [maintenance] }

@@ -1,0 +1,6 @@
+---
+# Copia este fichero a vault.yml, cambia el valor y cifralo:
+#   cp vault.example.yml vault.yml
+#   ansible-vault encrypt vault.yml
+vault_ilias_db_password: CAMBIAME
+vault_ilias_root_password: CAMBIAME

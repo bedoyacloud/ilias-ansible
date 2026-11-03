@@ -1,0 +1,47 @@
+# {{ ansible_managed }}
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    root {{ ilias_root }}/public;
+    index index.php;
+
+    client_max_body_size 256M;
+    server_tokens off;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    # Ficheros ocultos y areas internas (equivale al RedirectMatch 404 del .htaccess de ILIAS)
+    location ~ /\.(?!well-known) { return 404; }
+    location ~ ^/(patches|\.git|\.github) { return 404; }
+
+    # Control de acceso a ficheros (Web Access Checker): data/<client>/<x>/<fichero> -> wac.php
+    location ~ ^/data/[^/]+/[^/]+/.+ {
+        rewrite ^ /wac.php last;
+    }
+
+    # Atajos goto
+    rewrite ^/go/(.*)$ /goto.php/$1 last;
+    rewrite ^/goto_(.*)_(wiki_([0-9]+|wpage)(.*))\.html$ /goto.php?client_id=$1&target=$2 last;
+    rewrite ^/goto_(.*)_(usr_([a-z]+))\.html$ /goto.php?client_id=$1&target=$2 last;
+    rewrite ^/goto_(.*)_([a-z]+_[0-9]+(.*))\.html$ /goto.php?client_id=$1&target=$2 last;
+
+    location / {
+        try_files $uri $uri/ @shortlink;
+    }
+    location @shortlink {
+        rewrite ^/([A-Za-z0-9_-]+)/?$ /goto.php/shortlink/$1 last;
+        return 404;
+    }
+
+    location ~ \.php(/|$) {
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_param HTTP_AUTHORIZATION $http_authorization;
+        fastcgi_pass unix:/run/php/ilias.sock;
+        fastcgi_read_timeout 600s;
+    }
+}

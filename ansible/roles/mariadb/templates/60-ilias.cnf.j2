@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+# ILIAS NO soporta utf8mb4
+[mysqld]
+bind-address = 127.0.0.1
+character-set-server = utf8mb3
+collation-server = utf8mb3_general_ci
+innodb_buffer_pool_size = {{ mariadb_buffer_pool }}
+join_buffer_size = 256K
+table_open_cache = 1000
+sql_mode = NO_ENGINE_SUBSTITUTION
+skip-name-resolve

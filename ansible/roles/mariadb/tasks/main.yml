@@ -1,0 +1,42 @@
+---
+- name: MariaDB y el conector Python que usa Ansible
+  ansible.builtin.apt:
+    name:
+      - mariadb-server
+      - python3-pymysql
+    state: present
+    cache_valid_time: 3600
+
+- name: Configuracion de MariaDB para ILIAS (utf8mb3, solo localhost)
+  ansible.builtin.template:
+    src: 60-ilias.cnf.j2
+    dest: /etc/mysql/mariadb.conf.d/60-ilias.cnf
+    mode: "0644"
+  notify: Restart mariadb
+
+- name: MariaDB activo
+  ansible.builtin.service:
+    name: mariadb
+    state: started
+    enabled: true
+
+- name: Aplicar la configuracion antes de crear la base
+  ansible.builtin.meta: flush_handlers
+
+- name: Base de datos de ILIAS
+  ansible.mysql.mysql_db:
+    name: "{{ ilias_db_name }}"
+    encoding: utf8mb3
+    collation: utf8mb3_general_ci
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock
+
+- name: Usuario de ILIAS con permisos minimos (solo su base)
+  ansible.mysql.mysql_user:
+    name: "{{ ilias_db_user }}"
+    password: "{{ vault_ilias_db_password }}"
+    host: localhost
+    priv: "{{ ilias_db_name }}.*:ALL/*.*:LOCK TABLES"
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock
+  no_log: true

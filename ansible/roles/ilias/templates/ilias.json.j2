@@ -1,0 +1,25 @@
+{
+  "common": { "client_id": "{{ ilias_client_id }}" },
+  "database": {
+    "user": "{{ ilias_db_user }}",
+    "password": "{{ vault_ilias_db_password }}",
+    "database": "{{ ilias_db_name }}",
+    "create_database": false
+  },
+  "filesystem": { "data_dir": "{{ ilias_data_dir }}" },
+  "logging": {
+    "enable": true,
+    "path_to_logfile": "{{ ilias_log_dir }}/ilias.log",
+    "errorlog_dir": "{{ ilias_log_dir }}"
+  },
+  "http": { "path": "{{ ilias_url }}" },
+  "systemfolder": {
+    "contact": {
+      "firstname": "{{ ilias_contact.firstname }}",
+      "lastname": "{{ ilias_contact.lastname }}",
+      "email": "{{ ilias_contact.email }}"
+    }
+  },
+  "utilities": { "path_to_convert": "/usr/bin/convert" },
+  "preview": { "path_to_ghostscript": "/usr/bin/gs" }
+}

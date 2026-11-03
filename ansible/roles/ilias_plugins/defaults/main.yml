@@ -1,0 +1,8 @@
+---
+# Lista de plugins (addons) de ILIAS. Cada elemento:
+#   name:    nombre de la carpeta del plugin, y el que usa setup.php --legacy-plugin
+#   id:      el $id de su plugin.php (con el que ILIAS lo registra en la tabla il_plugin)
+#   repo:    repositorio git
+#   version: rama, tag o commit (fijalo: asi el despliegue es reproducible)
+#   slot:    ruta bajo Customizing/global/plugins (segun el tipo de plugin)
+ilias_plugins_list: []

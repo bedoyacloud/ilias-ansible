@@ -1,0 +1,49 @@
+---
+- name: Paquetes de PHP y utilidades
+  ansible.builtin.apt:
+    name: >-
+      {{ ['git', 'unzip', 'acl', 'composer', 'imagemagick', 'ghostscript']
+         + php_extensions | map('regex_replace', '^', 'php' ~ php_version ~ '-') | list }}
+    state: present
+    cache_valid_time: 3600
+
+- name: Configuracion de PHP para ILIAS (FPM y CLI)
+  ansible.builtin.template:
+    src: 99-ilias.ini.j2
+    dest: "/etc/php/{{ php_version }}/{{ item }}/conf.d/99-ilias.ini"
+    mode: "0644"
+  loop: [fpm, cli]
+  notify: Restart php-fpm
+
+- name: Desactivar el pool www por defecto
+  ansible.builtin.command:
+    cmd: "mv /etc/php/{{ php_version }}/fpm/pool.d/www.conf /etc/php/{{ php_version }}/fpm/pool.d/www.conf.disabled"
+    removes: "/etc/php/{{ php_version }}/fpm/pool.d/www.conf"
+  notify: Restart php-fpm
+
+- name: Directorios de ILIAS (datos, config, logs)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ ilias_data_dir }}", mode: "0750" }
+    - { path: "{{ ilias_config_dir }}", mode: "0750" }
+    - { path: "{{ ilias_log_dir }}", mode: "0750" }
+    - { path: /var/www/.npm, mode: "0750" }
+    - { path: /var/www/.cache, mode: "0750" }
+
+- name: Pool PHP-FPM dedicado de ILIAS
+  ansible.builtin.template:
+    src: pool-ilias.conf.j2
+    dest: "/etc/php/{{ php_version }}/fpm/pool.d/ilias.conf"
+    mode: "0644"
+  notify: Restart php-fpm
+
+- name: PHP-FPM activo
+  ansible.builtin.service:
+    name: "php{{ php_version }}-fpm"
+    state: started
+    enabled: true

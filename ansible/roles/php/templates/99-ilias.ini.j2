@@ -1,0 +1,18 @@
+; {{ ansible_managed }}
+; Valores recomendados por la documentacion de ILIAS
+max_execution_time = 600
+memory_limit = 512M
+error_reporting = E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_STRICT
+display_errors = Off
+post_max_size = 256M
+upload_max_filesize = 256M
+max_input_vars = 10000
+allow_url_fopen = 1
+session.gc_probability = 1
+session.gc_divisor = 100
+session.gc_maxlifetime = 14400
+session.cookie_httponly = On
+session.cookie_secure = {{ php_cookie_secure }}
+session.save_handler = files
+expose_php = Off
+session.upload_progress.enabled = 0

@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: ansible-lint y syntax-check
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ansible
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Ansible y ansible-lint
+        run: pip install ansible-core ansible-lint
+
+      - name: Instalar colecciones
+        run: ansible-galaxy collection install -r requirements.yml -p collections
+
+      # No hay vault.yml ni hosts.yml en el repo (estan en .gitignore): se usa el inventario de ejemplo
+      - name: syntax-check
+        run: ansible-playbook playbooks/site.yml -i inventory/hosts.example.yml --syntax-check
+
+      - name: ansible-lint
+        run: ansible-lint playbooks roles

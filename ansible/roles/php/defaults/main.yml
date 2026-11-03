@@ -1,0 +1,2 @@
+---
+php_extensions: [fpm, cli, gd, xml, xsl, mysql, curl, zip, mbstring, imagick, soap, ldap, intl]

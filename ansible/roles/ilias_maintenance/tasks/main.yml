@@ -1,0 +1,39 @@
+---
+- name: Cron de ILIAS cada 5 minutos (como www-data)
+  ansible.builtin.cron:
+    name: ilias
+    cron_file: ilias
+    user: www-data
+    minute: "*/5"
+    job: "/usr/bin/php {{ ilias_root }}/cli/cron.php run-jobs {{ ilias_cron_user }} {{ ilias_client_id }} >> {{ ilias_log_dir }}/cron.log 2>&1"
+
+- name: Rotacion de los logs de ILIAS
+  ansible.builtin.template:
+    src: logrotate-ilias.j2
+    dest: /etc/logrotate.d/ilias
+    mode: "0644"
+
+- name: Directorio de backups (solo root)
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Script de backup
+  ansible.builtin.template:
+    src: ilias-backup.sh.j2
+    dest: /usr/local/sbin/ilias-backup.sh
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Backup diario
+  ansible.builtin.cron:
+    name: ilias-backup
+    cron_file: ilias-backup
+    user: root
+    hour: "{{ backup_hour }}"
+    minute: "{{ backup_minute }}"
+    job: "/usr/local/sbin/ilias-backup.sh >> /var/log/ilias-backup.log 2>&1"

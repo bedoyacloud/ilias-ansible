@@ -1,0 +1,62 @@
+---
+- name: Carpeta del tipo de plugin (dueno www-data)
+  ansible.builtin.file:
+    path: "{{ ilias_root }}/public/Customizing/global/plugins/{{ item.slot }}"
+    state: directory
+    mode: "0755"
+  become: true
+  become_user: www-data
+  loop: "{{ ilias_plugins_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Codigo de los plugins (version fijada)
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ ilias_root }}/public/Customizing/global/plugins/{{ item.slot }}/{{ item.name }}"
+    version: "{{ item.version }}"
+    depth: 1
+  become: true
+  become_user: www-data
+  loop: "{{ ilias_plugins_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: ilias_plugins_code
+
+- name: Regenerar el classmap de composer si algun plugin cambio
+  ansible.builtin.command: composer du --no-interaction
+  args:
+    chdir: "{{ ilias_root }}"
+  become: true
+  become_user: www-data
+  environment:
+    HOME: /var/www
+    COMPOSER_HOME: /var/www/.cache/composer
+  when: ilias_plugins_code.changed  # noqa: no-handler
+  changed_when: true
+
+- name: Plugins activos en ILIAS segun la base de datos
+  ansible.mysql.mysql_query:
+    login_db: "{{ ilias_db_name }}"
+    login_unix_socket: /run/mysqld/mysqld.sock
+    query: "SELECT plugin_id FROM il_plugin WHERE active = 1"
+  register: ilias_plugins_active
+  changed_when: false
+  check_mode: false   # es un SELECT: puede ejecutarse tambien con --check
+
+- name: Instalar o actualizar y activar el plugin (si cambio el codigo o no esta activo)
+  ansible.builtin.command: "php cli/setup.php install --legacy-plugin {{ item.item.name }} -y"
+  args:
+    chdir: "{{ ilias_root }}"
+  become: true
+  become_user: www-data
+  environment:
+    HOME: /var/www
+  loop: "{{ ilias_plugins_code.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: >-
+    item is changed or
+    item.item.id not in (ilias_plugins_active.query_result[0] | map(attribute='plugin_id') | list)
+  changed_when: true
+  notify: Restart php-fpm

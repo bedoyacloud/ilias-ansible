@@ -1,0 +1,48 @@
+---
+# Variables comunes a todos los servidores. Los secretos NO van aqui: ver vault.example.yml
+
+# --- ILIAS ---
+ilias_version: v11.5                 # tag de https://github.com/ILIAS-eLearning/ILIAS
+ilias_client_id: pocilias
+ilias_url: "http://{{ ansible_host }}"   # con dominio y HTTPS: "https://ilias.ejemplo.com"
+ilias_root: /var/www/ilias
+ilias_data_dir: /var/www/files
+ilias_config_dir: /var/www/config
+ilias_log_dir: /var/www/logs
+ilias_contact:
+  firstname: Admin
+  lastname: ILIAS
+  email: admin@example.com
+ilias_cron_user: root                # en produccion: crear un usuario dedicado (ver docs)
+
+# --- Base de datos ---
+ilias_db_name: ilias
+ilias_db_user: ilias
+mariadb_buffer_pool: 256M            # 1G o mas en produccion
+
+# --- PHP ---
+php_version: "8.3"
+php_fpm_max_children: 6
+php_cookie_secure: "Off"             # "On" cuando haya HTTPS
+
+# --- Node ---
+node_major: "22"
+
+# --- Sistema ---
+swap_size: 2G
+ssh_allowed_ports: [OpenSSH, "80/tcp"]
+
+# --- Backups ---
+backup_dir: /var/backups/ilias
+backup_keep_days: 7
+backup_hour: 2
+backup_minute: 30
+
+# --- Plugins (addons) de ILIAS ---
+# Para anadir uno: una entrada nueva y `ansible-playbook playbooks/site.yml --tags plugins`
+ilias_plugins_list:
+  - name: GeoGebra
+    id: srgg
+    repo: https://github.com/surlabs/GeoGebraForILIAS.git
+    version: release_11
+    slot: Services/COPage/PageComponent

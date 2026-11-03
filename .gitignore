@@ -1,0 +1,39 @@
+# --- Datos de tu entorno: se suben solo los .example ---
+# Inventario real (IPs, usuario, ruta de la llave). Copia hosts.example.yml -> hosts.yml
+ansible/inventory/hosts.yml
+# Secretos. Aunque esten cifrados con Ansible Vault, en un repo publico no se suben.
+# Copia vault.example.yml -> vault.yml y cifralo con: ansible-vault encrypt
+ansible/inventory/group_vars/all/vault.yml
+# Contrasena de Vault
+.vault-pass
+.vault_pass
+vault-pass.txt
+
+# --- Llaves y certificados ---
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# --- Backups descargados del servidor ---
+backups/
+*.sql
+*.sql.gz
+
+# --- Ansible ---
+*.retry
+.ansible/
+ansible/collections/
+
+# --- Herramientas locales ---
+.claude/
+.vscode/
+.idea/
+.DS_Store
+
+# --- Fichero del taller original (reemplazado por ansible/inventory/hosts.yml) ---
+inventario.ini
+
+# --- Notas personales de entrevista (copia local, no se sube) ---
+RESUMEN-ENTREVISTA.md
+docs/laboratorio-ilias/1-instalacion-manual/RESUMEN-ENTREVISTA.md

@@ -1,0 +1,34 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Backup de ILIAS: base de datos + ficheros + configuracion
+set -euo pipefail
+umask 077                                   # todo lo que se cree es solo de root
+
+DEST={{ backup_dir }}
+KEEP_DAYS={{ backup_keep_days }}
+TS=$(date -u +%Y%m%dT%H%M%SZ)
+OUT="$DEST/$TS"
+mkdir -p "$OUT"
+
+# 1) Base de datos (--single-transaction: copia consistente sin bloquear la web)
+mariadb-dump --single-transaction --routines --triggers {{ ilias_db_name }} | gzip > "$OUT/db.sql.gz"
+
+# 2) Ficheros subidos y configuracion de ILIAS
+tar -czf "$OUT/files.tar.gz"  -C / {{ ilias_data_dir | regex_replace('^/', '') }}
+tar -czf "$OUT/config.tar.gz" -C / {{ ilias_config_dir | regex_replace('^/', '') }}
+
+# 3) Configuracion del sistema
+tar -czf "$OUT/sistema.tar.gz" -C / \
+  etc/nginx/sites-available/ilias \
+  etc/php/{{ php_version }}/fpm/conf.d/99-ilias.ini \
+  etc/php/{{ php_version }}/fpm/pool.d/ilias.conf \
+  etc/mysql/mariadb.conf.d/60-ilias.cnf \
+  etc/cron.d/ilias
+
+# 4) Sumas de verificacion para detectar corrupcion
+( cd "$OUT" && sha256sum *.gz > SHA256SUMS )
+
+# 5) Borrar copias antiguas
+find "$DEST" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} +
+
+echo "Backup OK: $OUT ($(du -sh "$OUT" | cut -f1))"

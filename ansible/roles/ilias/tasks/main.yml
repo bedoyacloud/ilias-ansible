@@ -1,0 +1,122 @@
+---
+# --- Node.js desde NodeSource ---
+- name: Dependencia para el modulo deb822_repository
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    cache_valid_time: 3600
+
+- name: Repositorio NodeSource
+  ansible.builtin.deb822_repository:
+    name: nodesource
+    types: deb
+    uris: "https://deb.nodesource.com/node_{{ node_major }}.x"
+    suites: nodistro
+    components: main
+    signed_by: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    state: present
+
+- name: Node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+    update_cache: true
+
+# --- Codigo ---
+- name: Git acepta el repositorio de ILIAS (el dueno es www-data)
+  community.general.git_config:
+    name: safe.directory
+    value: "{{ ilias_root }}"
+    scope: system
+
+- name: Codigo de ILIAS (tag fijado)
+  ansible.builtin.git:
+    repo: https://github.com/ILIAS-eLearning/ILIAS.git
+    dest: "{{ ilias_root }}"
+    version: "{{ ilias_version }}"
+    depth: 1
+  register: ilias_code
+
+- name: El codigo pertenece a www-data
+  ansible.builtin.file:
+    path: "{{ ilias_root }}"
+    state: directory
+    recurse: true
+    owner: www-data
+    group: www-data
+  when: ilias_code.changed  # noqa: no-handler
+
+- name: Dependencias de npm y composer
+  ansible.builtin.shell: |
+    set -e
+    npm clean-install --omit=dev --ignore-scripts
+    composer install --no-dev --no-interaction
+    touch {{ ilias_root }}/.built-{{ ilias_version }}
+  args:
+    chdir: "{{ ilias_root }}"
+    creates: "{{ ilias_root }}/.built-{{ ilias_version }}"
+  become: true
+  become_user: www-data
+  environment:
+    HOME: /var/www
+    npm_config_cache: /var/www/.npm
+    COMPOSER_HOME: /var/www/.cache/composer
+
+# --- Instalacion ---
+- name: Configuracion de instalacion (lleva la contrasena de la BD)
+  ansible.builtin.template:
+    src: ilias.json.j2
+    dest: "{{ ilias_config_dir }}/ilias.json"
+    owner: www-data
+    group: www-data
+    mode: "0600"
+  no_log: true
+
+- name: Cuantas tablas tiene la base de ILIAS
+  ansible.mysql.mysql_query:
+    login_db: "{{ ilias_db_name }}"
+    login_unix_socket: /run/mysqld/mysqld.sock
+    query: "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = %s"
+    positional_args: ["{{ ilias_db_name }}"]
+  register: ilias_tables
+  changed_when: false
+  check_mode: false   # es un SELECT: puede ejecutarse tambien con --check
+
+- name: Instalar ILIAS (solo si la base esta vacia)
+  ansible.builtin.command: "php cli/setup.php install {{ ilias_config_dir }}/ilias.json -y"
+  args:
+    chdir: "{{ ilias_root }}"
+  become: true
+  become_user: www-data
+  environment:
+    HOME: /var/www
+  when: ilias_tables.query_result[0][0].n | int == 0
+  register: ilias_installed
+  changed_when: true
+
+- name: Cambiar la contrasena inicial del usuario root de ILIAS
+  when: ilias_installed is changed  # noqa: no-handler
+  block:
+    - name: Calcular el hash bcrypt
+      ansible.builtin.command: php -r 'echo password_hash(getenv("ILIAS_PW"), PASSWORD_BCRYPT, ["cost" => 10]);'
+      environment:
+        ILIAS_PW: "{{ vault_ilias_root_password }}"
+      register: ilias_root_hash
+      changed_when: false
+      no_log: true
+
+    - name: Guardar el hash en ILIAS
+      ansible.mysql.mysql_query:
+        login_db: "{{ ilias_db_name }}"
+        login_unix_socket: /run/mysqld/mysqld.sock
+        query: "UPDATE usr_data SET passwd = %s, passwd_enc_type = 'bcryptphp', passwd_salt = NULL WHERE login = 'root'"
+        positional_args: ["{{ ilias_root_hash.stdout }}"]
+      no_log: true
+
+- name: Config de la instalacion legible solo por www-data
+  ansible.builtin.file:
+    path: "{{ ilias_root }}/public/data/{{ ilias_client_id }}/client.ini.php"
+    mode: "0600"
+    owner: www-data
+    group: www-data
+  when: ilias_installed is changed  # noqa: no-handler

@@ -1,0 +1,36 @@
+---
+- name: Instalar nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    cache_valid_time: 3600
+
+- name: Virtual host de ILIAS
+  ansible.builtin.template:
+    src: ilias.conf.j2
+    dest: /etc/nginx/sites-available/ilias
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Activar el sitio ILIAS
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/ilias
+    dest: /etc/nginx/sites-enabled/ilias
+    state: link
+  notify: Reload nginx
+
+- name: Quitar el sitio por defecto de Ubuntu
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Validar la configuracion completa de nginx
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Activar nginx
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
