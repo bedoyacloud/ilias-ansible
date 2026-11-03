@@ -4,3 +4,4 @@
 #   ansible-vault encrypt vault.yml
 vault_ilias_db_password: CAMBIAME
 vault_ilias_root_password: CAMBIAME
+vault_grafana_admin_password: CAMBIAME   # solo en el servidor del grupo monitoring

@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+global:
+  scrape_interval: 30s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+
+  # Un objetivo por servidor del grupo ilias. El propio servidor de monitorizacion se consulta por localhost.
+  - job_name: node
+    static_configs:
+{% for h in groups['ilias'] %}
+      - targets: ["{{ '127.0.0.1' if h == inventory_hostname else hostvars[h].ansible_host }}:{{ node_exporter_port }}"]
+        labels:
+          instance: "{{ h }}"
+{% endfor %}

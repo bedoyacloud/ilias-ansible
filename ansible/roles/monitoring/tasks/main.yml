@@ -1,0 +1,66 @@
+---
+- name: Directorios de monitorizacion
+  ansible.builtin.file:
+    path: "{{ monitoring_dir }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - prometheus
+    - grafana/provisioning/datasources
+    - grafana/provisioning/dashboards
+    - grafana/dashboards
+
+- name: Configuracion de Prometheus (objetivos = servidores del grupo ilias)
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_dir }}/prometheus/prometheus.yml"
+    mode: "0644"
+  notify: Restart monitoring
+
+- name: Datasource de Grafana (Prometheus)
+  ansible.builtin.template:
+    src: grafana-datasource.yml.j2
+    dest: "{{ monitoring_dir }}/grafana/provisioning/datasources/prometheus.yml"
+    mode: "0644"
+  notify: Restart monitoring
+
+- name: Proveedor de dashboards de Grafana
+  ansible.builtin.template:
+    src: grafana-dashboards.yml.j2
+    dest: "{{ monitoring_dir }}/grafana/provisioning/dashboards/default.yml"
+    mode: "0644"
+  notify: Restart monitoring
+
+- name: Descargar el dashboard Node Exporter Full
+  ansible.builtin.get_url:
+    url: "https://grafana.com/api/dashboards/{{ monitoring_dashboard_id }}/revisions/{{ monitoring_dashboard_revision }}/download"
+    dest: "{{ monitoring_dir }}/grafana/dashboards/node-exporter-full.json"
+    mode: "0644"
+
+- name: El dashboard apunta al datasource provisionado
+  ansible.builtin.replace:
+    path: "{{ monitoring_dir }}/grafana/dashboards/node-exporter-full.json"
+    regexp: '\$\{DS_PROMETHEUS\}'
+    replace: prometheus
+
+- name: Contrasena del administrador de Grafana (fichero solo para root)
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ monitoring_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart monitoring
+
+- name: Fichero docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ monitoring_dir }}/docker-compose.yml"
+    mode: "0644"
+  notify: Restart monitoring
+
+- name: Prometheus y Grafana en marcha
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_dir }}"
+    state: present

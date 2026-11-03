@@ -1,0 +1,5 @@
+---
+# Donde escucha node_exporter. Solo localhost por defecto: expone metricas sin autenticacion.
+node_exporter_listen: "127.0.0.1:9100"
+# IPs que pueden consultarlo desde fuera (UFW). Solo se usan si escucha en 0.0.0.0 y manage_system es true.
+node_exporter_allow_from: []

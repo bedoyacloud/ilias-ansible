@@ -35,6 +35,9 @@ nginx_tls_key: /etc/ssl/cloudflare/origin.key
 # --- Sistema ---
 manage_system: true                  # false: no tocar firewall, swap ni actualizaciones (servidor compartido)
 
+# --- Metricas (Prometheus + Grafana) ---
+node_exporter_port: 9100             # lo usan node_exporter (escucha) y monitoring (consulta)
+
 # --- Node ---
 node_major: "22"
 

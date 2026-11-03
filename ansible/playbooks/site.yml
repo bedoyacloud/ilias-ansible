@@ -4,9 +4,17 @@
   become: true
   roles:
     - { role: base, tags: [base], when: manage_system | bool }
+    - { role: node_exporter, tags: [metrics] }
     - { role: php, tags: [php] }
     - { role: mariadb, tags: [mariadb] }
     - { role: ilias, tags: [ilias] }
     - { role: nginx, tags: [nginx] }
     - { role: ilias_plugins, tags: [plugins] }
     - { role: ilias_maintenance, tags: [maintenance] }
+
+# Prometheus + Grafana, solo en los servidores del grupo "monitoring" (opcional)
+- name: Monitorizacion (Prometheus y Grafana)
+  hosts: monitoring
+  become: true
+  roles:
+    - { role: monitoring, tags: [monitoring] }

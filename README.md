@@ -25,7 +25,8 @@ Navegador ──HTTP:80──> nginx ──socket──> PHP-FPM (pool ilias) �
 ```
 docs/laboratorio-ilias/
 ├── 1-instalacion-manual/   los 10 pasos a mano (00 a 09) y el resumen para repasar
-└── 2-ansible/              el mismo despliegue con Ansible (A0 a A4 hechas, plugins y CI por hacer)
+├── 2-ansible/              el mismo despliegue con Ansible, los plugins, el pipeline y un VPS con HTTPS (A0 a A8)
+└── 3-monitorizacion/       Prometheus + Grafana con métricas de todos los servidores
 ansible/                    el código de Ansible: inventario, variables, playbook y roles
 ```
 
@@ -57,3 +58,10 @@ Recorrido completo en [2-ansible/README.md](docs/laboratorio-ilias/2-ansible/REA
 - [x] A7. Prueba desde cero en un servidor nuevo (un solo comando) — [07-prueba-desde-cero.md](docs/laboratorio-ilias/2-ansible/07-prueba-desde-cero.md)
 - [x] A8. VPS compartido con HTTPS (otra versión, secretos propios) — [08-vps-compartido-https.md](docs/laboratorio-ilias/2-ansible/08-vps-compartido-https.md)
 - [x] A9. Repo público sin datos personales ni secretos (ver la auditoría en [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md))
+
+## 3. Monitorización (Prometheus + Grafana)
+
+Guía: [3-monitorizacion/README.md](docs/laboratorio-ilias/3-monitorizacion/README.md).
+
+- [x] Prometheus y Grafana en un VPS, con node_exporter en cada servidor
+- [ ] Métricas de los servidores de AWS (pendiente de abrir el puerto 9100 en su security group)

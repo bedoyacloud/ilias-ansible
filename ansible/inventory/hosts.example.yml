@@ -4,6 +4,13 @@ all:
       hosts:
         ilias-01:
           ansible_host: IP_DEL_SERVIDOR
+          # Si este servidor lo consulta un Prometheus de otra maquina (ver docs/laboratorio-ilias/3-monitorizacion):
+          # node_exporter_listen: "0.0.0.0:9100"
+          # node_exporter_allow_from: ["IP_DEL_SERVIDOR_DE_MONITORIZACION"]
       vars:
         ansible_user: ubuntu
         ansible_ssh_private_key_file: ~/.ssh/TU_LLAVE.pem
+    # Opcional: el servidor donde corren Prometheus y Grafana (puede ser el mismo ilias-01)
+    monitoring:
+      hosts:
+        ilias-01:

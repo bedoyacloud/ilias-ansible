@@ -1,0 +1,9 @@
+---
+monitoring_dir: /opt/monitoring
+monitoring_prometheus_image: prom/prometheus:v3.15.1
+monitoring_grafana_image: grafana/grafana:13.2.5
+monitoring_retention: 15d
+monitoring_grafana_admin_user: admin
+# Dashboard "Node Exporter Full" de grafana.com (id 1860), con la revision fijada
+monitoring_dashboard_id: 1860
+monitoring_dashboard_revision: 46

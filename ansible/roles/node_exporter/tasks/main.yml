@@ -1,0 +1,30 @@
+---
+- name: Instalar node_exporter
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    cache_valid_time: 3600
+
+- name: Direccion de escucha de node_exporter
+  ansible.builtin.template:
+    src: prometheus-node-exporter.j2
+    dest: /etc/default/prometheus-node-exporter
+    mode: "0644"
+  notify: Restart node_exporter
+
+- name: Activar node_exporter
+  ansible.builtin.service:
+    name: prometheus-node-exporter
+    state: started
+    enabled: true
+
+# El firewall solo se toca en servidores que gestionamos por completo (en un VPS compartido, no)
+- name: Permitir a Prometheus consultar node_exporter (solo desde sus IPs)
+  community.general.ufw:
+    rule: allow
+    src: "{{ item }}"
+    port: "{{ node_exporter_port }}"
+    proto: tcp
+    comment: Prometheus
+  loop: "{{ node_exporter_allow_from }}"
+  when: manage_system | bool
