@@ -83,6 +83,18 @@ jobs:
             --protocol tcp --port 22 --cidr "$RUNNER_IP/32" \
             --tag-specifications "ResourceType=security-group-rule,Tags=[{Key=Name,Value=github-actions-plan-$HOST}]"
 
+      # Un cambio en un security group tarda unos segundos en aplicarse: se espera a que el puerto responda de verdad
+      - name: Esperar a que el puerto 22 responda
+        if: ${{ matrix.aws }}
+        working-directory: ansible
+        run: |
+          IP=$(ansible-inventory --host "$HOST" | jq -r .ansible_host)
+          for i in $(seq 1 30); do
+            if timeout 5 bash -c "</dev/tcp/$IP/22" 2>/dev/null; then echo "SSH disponible (intento $i)"; exit 0; fi
+            sleep 2
+          done
+          echo "El puerto 22 no responde tras 60 s"; exit 1
+
       - name: Plan (--check --diff)
         working-directory: ansible
         run: |
@@ -146,6 +158,18 @@ jobs:
           aws ec2 authorize-security-group-ingress --group-id "$SG_ID" \
             --protocol tcp --port 22 --cidr "$RUNNER_IP/32" \
             --tag-specifications "ResourceType=security-group-rule,Tags=[{Key=Name,Value=github-actions-deploy-$HOST}]"
+
+      # Un cambio en un security group tarda unos segundos en aplicarse: se espera a que el puerto responda de verdad
+      - name: Esperar a que el puerto 22 responda
+        if: ${{ matrix.aws }}
+        working-directory: ansible
+        run: |
+          IP=$(ansible-inventory --host "$HOST" | jq -r .ansible_host)
+          for i in $(seq 1 30); do
+            if timeout 5 bash -c "</dev/tcp/$IP/22" 2>/dev/null; then echo "SSH disponible (intento $i)"; exit 0; fi
+            sleep 2
+          done
+          echo "El puerto 22 no responde tras 60 s"; exit 1
 
       - name: Aplicar
         working-directory: ansible
