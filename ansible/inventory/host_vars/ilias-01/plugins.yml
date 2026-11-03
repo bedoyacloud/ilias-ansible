@@ -1,0 +1,8 @@
+---
+# Addon de este servidor. Para cambiarlo: editar, pull request, y lanzar el workflow Deploy.
+ilias_plugins_list:
+  - name: JSXGraph
+    id: jsxgraph
+    repo: https://github.com/surlabs/JSXGraphForILIAS.git
+    version: release_11
+    slot: Services/COPage/PageComponent

@@ -1,0 +1,8 @@
+---
+# Addon de este servidor. Para cambiarlo: editar, pull request, y lanzar el workflow Deploy.
+ilias_plugins_list:
+  - name: LiveVoting
+    id: xlvo
+    repo: https://github.com/surlabs/LiveVotingForILIAS.git
+    version: dev_11
+    slot: Services/Repository/RepositoryObject

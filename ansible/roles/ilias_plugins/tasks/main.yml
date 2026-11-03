@@ -23,8 +23,8 @@
     label: "{{ item.name }}"
   register: ilias_plugins_code
 
-- name: Regenerar el classmap de composer si algun plugin cambio
-  ansible.builtin.command: composer du --no-interaction
+- name: Dependencias y classmap de composer si algun plugin cambio
+  ansible.builtin.command: composer install --no-dev --no-interaction
   args:
     chdir: "{{ ilias_root }}"
   become: true

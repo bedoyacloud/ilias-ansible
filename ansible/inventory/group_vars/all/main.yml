@@ -52,10 +52,7 @@ backup_hour: 2
 backup_minute: 30
 
 # --- Plugins (addons) de ILIAS ---
-# Para anadir uno: una entrada nueva y `ansible-playbook playbooks/site.yml --tags plugins`
-ilias_plugins_list:
-  - name: GeoGebra
-    id: srgg
-    repo: https://github.com/surlabs/GeoGebraForILIAS.git
-    version: release_11
-    slot: Services/COPage/PageComponent
+# La lista de cada servidor va en inventory/host_vars/<servidor>/plugins.yml (se versiona: un cambio de addon es un cambio de codigo).
+# Formato de cada elemento (ver roles/ilias_plugins/defaults/main.yml):
+#   - { name: GeoGebra, id: srgg, repo: https://github.com/surlabs/GeoGebraForILIAS.git, version: release_11, slot: Services/COPage/PageComponent }
+ilias_plugins_list: []
