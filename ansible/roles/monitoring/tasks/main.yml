@@ -1,4 +1,19 @@
 ---
+# Prometheus y Grafana corren en contenedores. Si el servidor ya tiene Docker (de cualquier origen) no se toca.
+- name: Comprobar si Docker ya esta instalado
+  ansible.builtin.stat:
+    path: /usr/bin/docker
+  register: monitoring_docker_bin
+
+- name: Instalar Docker y Compose (solo si no estaban)
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose-v2
+    state: present
+    cache_valid_time: 3600
+  when: not monitoring_docker_bin.stat.exists
+
 - name: Directorios de monitorizacion
   ansible.builtin.file:
     path: "{{ monitoring_dir }}/{{ item }}"

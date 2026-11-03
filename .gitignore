@@ -39,4 +39,4 @@ RESUMEN-ENTREVISTA.md
 docs/laboratorio-ilias/1-instalacion-manual/RESUMEN-ENTREVISTA.md
 
 # Secretos por servidor
-ansible/inventory/host_vars/
+ansible/inventory/host_vars/*/vault.yml

@@ -1,0 +1,41 @@
+name: Preparar el despliegue
+description: Instala Ansible y deja listos la llave SSH, el inventario y las contrasenas a partir de los secretos del repositorio.
+inputs:
+  ssh_key:
+    description: Llave privada SSH del pipeline
+    required: true
+  known_hosts:
+    description: Huellas SSH de los servidores
+    required: true
+  inventory:
+    description: Contenido de hosts.yml (IPs y variables de cada servidor)
+    required: true
+  vault_files:
+    description: tar.gz en base64 con los vault.yml ya descifrados
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Instalar Ansible y colecciones
+      shell: bash
+      working-directory: ansible
+      run: |
+        pip install ansible-core
+        ansible-galaxy collection install -r requirements.yml -p collections
+
+    - name: Llave SSH, inventario y contrasenas
+      shell: bash
+      working-directory: ansible
+      env:
+        SSH_KEY: ${{ inputs.ssh_key }}
+        KNOWN_HOSTS: ${{ inputs.known_hosts }}
+        INVENTORY: ${{ inputs.inventory }}
+        VAULT_FILES: ${{ inputs.vault_files }}
+      run: |
+        umask 077
+        install -d ~/.ssh
+        printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+        printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+        printf '%s\n' "$INVENTORY" > inventory/hosts.yml
+        # Los secretos de GitHub hacen aqui el papel del Vault: no hay vault.yml en el repo
+        printf '%s' "$VAULT_FILES" | base64 -d | tar -xz -C .
