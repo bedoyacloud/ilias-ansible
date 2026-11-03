@@ -37,6 +37,12 @@
     dest: "{{ monitoring_dir }}/grafana/dashboards/node-exporter-full.json"
     mode: "0644"
 
+- name: Dashboard propio con una seccion por servidor
+  ansible.builtin.copy:
+    src: ilias-servidores.json
+    dest: "{{ monitoring_dir }}/grafana/dashboards/ilias-servidores.json"
+    mode: "0644"
+
 - name: El dashboard apunta al datasource provisionado
   ansible.builtin.replace:
     path: "{{ monitoring_dir }}/grafana/dashboards/node-exporter-full.json"

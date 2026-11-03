@@ -30,6 +30,7 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/ilias-servidores.json
 {% if monitoring_domain | length > 0 %}
       GF_SERVER_DOMAIN: {{ monitoring_domain }}
       GF_SERVER_ROOT_URL: https://{{ monitoring_domain }}/

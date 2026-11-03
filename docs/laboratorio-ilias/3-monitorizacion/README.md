@@ -102,6 +102,26 @@ ansible-vault view inventory/host_vars/ilias-vps/vault.yml
 
 Dashboard: **Dashboards → Servidores → Node Exporter Full**, y el selector *Host* para elegir el servidor.
 
+## 6a. El dashboard "ILIAS · Servidores"
+
+Es el dashboard propio del laboratorio y la **página de inicio** de Grafana. *Node Exporter Full* sigue disponible para el detalle fino.
+
+| Zona | Qué muestra |
+|---|---|
+| **Resumen** (arriba) | Una ficha por servidor para *CPU ahora*, *Memoria usada*, *Disco raíz usado* y *Tiempo encendido*, con color según umbrales (verde, naranja desde el 60 %, rojo desde el 85 %) |
+| **CPU % de todos los servidores** | Una línea por servidor, para compararlos de un vistazo |
+| **Una sección por servidor** | CPU por tipo (apilada), carga media frente al número de núcleos, memoria (usada, caché, swap), disco usado por montaje, red (entrada y salida) y lectura/escritura de disco |
+
+Las secciones se generan solas: el selector **Servidor** (arriba, con *All* por defecto) lista los servidores que Prometheus conoce y
+Grafana repite la sección por cada uno. Para ver uno solo, se elige en el selector. Un servidor nuevo en el inventario aparece sin tocar el dashboard.
+
+Cómo leer la CPU por tipo: `user` son los programas, `system` el kernel, `iowait` el tiempo esperando al disco y `steal`
+la CPU que el proveedor de la máquina virtual reparte a otras VM (si es alto, la VM está limitada).
+
+El dashboard es un fichero JSON versionado ([`ilias-servidores.json`](../../../ansible/roles/monitoring/files/ilias-servidores.json)).
+Para cambiarlo: edítalo en Grafana, **Export → Save to file**, y sustituye ese fichero; el siguiente despliegue lo aplica.
+Se comprobó que **cada una de sus 19 consultas devuelve datos para los tres servidores** antes de desplegarlo.
+
 ## 6b. Acceso público por dominio (opcional)
 
 Si el servidor ya sirve sitios con HTTPS (aquí, con un certificado de origen de Cloudflare), Grafana puede publicarse en un subdominio
