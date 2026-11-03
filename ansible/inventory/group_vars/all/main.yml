@@ -25,6 +25,16 @@ php_version: "8.3"
 php_fpm_max_children: 6
 php_cookie_secure: "Off"             # "On" cuando haya HTTPS
 
+# --- nginx ---
+nginx_server_name: "_"               # con dominio: "ilias.ejemplo.com"
+nginx_default_server: true           # false si el servidor ya tiene otro default_server
+nginx_tls: false                     # true: HTTPS (y redireccion 80 -> 443)
+nginx_tls_cert: /etc/ssl/cloudflare/origin.pem
+nginx_tls_key: /etc/ssl/cloudflare/origin.key
+
+# --- Sistema ---
+manage_system: true                  # false: no tocar firewall, swap ni actualizaciones (servidor compartido)
+
 # --- Node ---
 node_major: "22"
 

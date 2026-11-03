@@ -3,7 +3,7 @@
   hosts: ilias
   become: true
   roles:
-    - { role: base, tags: [base] }
+    - { role: base, tags: [base], when: manage_system | bool }
     - { role: php, tags: [php] }
     - { role: mariadb, tags: [mariadb] }
     - { role: ilias, tags: [ilias] }

@@ -37,3 +37,6 @@ inventario.ini
 # --- Notas personales de entrevista (copia local, no se sube) ---
 RESUMEN-ENTREVISTA.md
 docs/laboratorio-ilias/1-instalacion-manual/RESUMEN-ENTREVISTA.md
+
+# Secretos por servidor
+ansible/inventory/host_vars/

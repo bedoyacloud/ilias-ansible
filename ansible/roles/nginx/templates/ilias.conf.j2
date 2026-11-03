@@ -1,8 +1,27 @@
 # {{ ansible_managed }}
+{% if nginx_tls %}
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
+    listen 80;
+    listen [::]:80;
+    server_name {{ nginx_server_name }};
+    return 301 https://$host$request_uri;
+}
+
+{% endif %}
+server {
+{% if nginx_tls %}
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {{ nginx_server_name }};
+
+    ssl_certificate     {{ nginx_tls_cert }};
+    ssl_certificate_key {{ nginx_tls_key }};
+    ssl_protocols TLSv1.2 TLSv1.3;
+{% else %}
+    listen 80{{ ' default_server' if nginx_default_server else '' }};
+    listen [::]:80{{ ' default_server' if nginx_default_server else '' }};
+    server_name {{ nginx_server_name }};
+{% endif %}
 
     root {{ ilias_root }}/public;
     index index.php;
@@ -40,6 +59,9 @@ server {
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         fastcgi_param PATH_INFO $fastcgi_path_info;
+{% if nginx_tls %}
+        fastcgi_param HTTPS on;
+{% endif %}
         fastcgi_param HTTP_AUTHORIZATION $http_authorization;
         fastcgi_pass unix:/run/php/ilias.sock;
         fastcgi_read_timeout 600s;
