@@ -53,6 +53,6 @@ Recorrido completo en [2-ansible/README.md](docs/laboratorio-ilias/2-ansible/REA
 - [x] A3. ILIAS, nginx y mantenimiento — [03-ilias-nginx-mantenimiento.md](docs/laboratorio-ilias/2-ansible/03-ilias-nginx-mantenimiento.md)
 - [x] A4. Comprobar y lint — [04-comprobar-y-lint.md](docs/laboratorio-ilias/2-ansible/04-comprobar-y-lint.md)
 - [x] A5. Plugins (addons de Surlabs; ejemplo GeoGebra) — [05-plugins.md](docs/laboratorio-ilias/2-ansible/05-plugins.md)
-- [~] A6. GitHub Actions — [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md). CI funcionando; falta el usuario IAM para el deploy
-- [ ] A7. Prueba desde cero en un servidor nuevo
+- [x] A6. GitHub Actions: CI y deploy manual con aprobación — [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md)
+- [ ] A7. Prueba desde cero en un servidor nuevo (un solo comando)
 - [x] A8. Repo público sin datos personales ni secretos (ver la auditoría en [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md))
