@@ -9,7 +9,7 @@ on:
         default: all
         options: [all, plugins, ilias, nginx, php, mariadb, base, maintenance]
       dry_run:
-        description: "Solo --check --diff, sin aplicar cambios"
+        description: "Solo el plan (--check --diff), sin aplicar cambios"
         type: boolean
         default: true
 
@@ -21,23 +21,22 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
+  SG_ID: ${{ vars.AWS_SG_ID }}
+  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+  TAGS: ${{ inputs.tags }}
+
 jobs:
-  deploy:
-    name: Desplegar en el servidor
+  # 1) PLAN: sin aprobacion. Muestra que cambiaria, en el resumen de la ejecucion.
+  plan:
+    name: Plan (--check --diff)
     runs-on: ubuntu-24.04
-    # Exige aprobacion manual: Settings > Environments > production > Required reviewers
-    environment: production
     defaults:
       run:
         working-directory: ansible
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
-      SG_ID: ${{ vars.AWS_SG_ID }}
-      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-      TAGS: ${{ inputs.tags }}
-      DRY_RUN: ${{ inputs.dry_run }}
     steps:
       - uses: actions/checkout@v4
 
@@ -51,6 +50,90 @@ jobs:
           ansible-galaxy collection install -r requirements.yml -p collections
 
       # El security group solo deja entrar por SSH a una IP: se abre para este runner y se cierra al terminar
+      - name: Abrir SSH (22) a la IP de este runner
+        run: |
+          RUNNER_IP=$(curl -fsS https://checkip.amazonaws.com)
+          echo "RUNNER_IP=$RUNNER_IP" >> "$GITHUB_ENV"
+          aws ec2 authorize-security-group-ingress --group-id "$SG_ID" \
+            --protocol tcp --port 22 --cidr "$RUNNER_IP/32" \
+            --tag-specifications 'ResourceType=security-group-rule,Tags=[{Key=Name,Value=github-actions-plan}]'
+
+      - name: Preparar SSH, inventario y secretos
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DB_PASSWORD: ${{ secrets.ILIAS_DB_PASSWORD }}
+          ROOT_PASSWORD: ${{ secrets.ILIAS_ROOT_PASSWORD }}
+        run: |
+          umask 077
+          install -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          cat > inventory/hosts.yml <<INV
+          all:
+            children:
+              ilias:
+                hosts:
+                  ilias-01:
+                    ansible_host: ${DEPLOY_HOST}
+                vars:
+                  ansible_user: ubuntu
+                  ansible_ssh_private_key_file: ~/.ssh/deploy_key
+          INV
+          # En CI los secretos vienen de GitHub Secrets (no hay vault.yml en el repo)
+          printf 'vault_ilias_db_password: "%s"\nvault_ilias_root_password: "%s"\n' \
+            "$DB_PASSWORD" "$ROOT_PASSWORD" > "$RUNNER_TEMP/secrets.yml"
+
+      - name: Plan (--check --diff)
+        run: |
+          set -o pipefail
+          ARGS=()
+          [ "$TAGS" != "all" ] && ARGS+=(--tags "$TAGS")
+          ansible-playbook playbooks/site.yml --check --diff -e "@$RUNNER_TEMP/secrets.yml" "${ARGS[@]}" | tee "$RUNNER_TEMP/plan.txt"
+
+      - name: Publicar el plan en el resumen de la ejecucion
+        if: always()
+        run: |
+          {
+            echo "## Plan: que cambiaria en el servidor (tags: \`$TAGS\`)"
+            echo
+            echo '```'
+            grep -E "^(TASK|changed:|fatal:|PLAY RECAP|ilias-01 +:)|^[-+@]" "$RUNNER_TEMP/plan.txt" | grep -v "^ok:" | tail -150
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cerrar SSH (siempre)
+        if: always()
+        run: |
+          if [ -n "${RUNNER_IP:-}" ]; then
+            aws ec2 revoke-security-group-ingress --group-id "$SG_ID" \
+              --protocol tcp --port 22 --cidr "$RUNNER_IP/32"
+          fi
+          rm -f ~/.ssh/deploy_key "$RUNNER_TEMP/secrets.yml"
+
+  # 2) APLICAR: pide aprobacion DESPUES de ver el plan. Solo si dry_run = false.
+  apply:
+    name: Aplicar
+    needs: plan
+    if: ${{ inputs.dry_run == false }}
+    runs-on: ubuntu-24.04
+    # Aprobacion manual: Settings > Environments > production > Required reviewers
+    environment: production
+    defaults:
+      run:
+        working-directory: ansible
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Ansible y colecciones
+        run: |
+          pip install ansible-core
+          ansible-galaxy collection install -r requirements.yml -p collections
+
       - name: Abrir SSH (22) a la IP de este runner
         run: |
           RUNNER_IP=$(curl -fsS https://checkip.amazonaws.com)
@@ -81,27 +164,20 @@ jobs:
                   ansible_user: ubuntu
                   ansible_ssh_private_key_file: ~/.ssh/deploy_key
           INV
-          # En CI los secretos vienen de GitHub Secrets (no hay vault.yml en el repo)
           printf 'vault_ilias_db_password: "%s"\nvault_ilias_root_password: "%s"\n' \
             "$DB_PASSWORD" "$ROOT_PASSWORD" > "$RUNNER_TEMP/secrets.yml"
 
-      - name: Comprobar (--check --diff)
-        run: |
-          ARGS=()
-          [ "$TAGS" != "all" ] && ARGS+=(--tags "$TAGS")
-          ansible-playbook playbooks/site.yml --check --diff -e "@$RUNNER_TEMP/secrets.yml" "${ARGS[@]}"
-
       - name: Aplicar
-        if: ${{ inputs.dry_run == false }}
         run: |
           ARGS=()
           [ "$TAGS" != "all" ] && ARGS+=(--tags "$TAGS")
           ansible-playbook playbooks/site.yml -e "@$RUNNER_TEMP/secrets.yml" "${ARGS[@]}"
 
-      - name: Prueba de humo
-        if: ${{ inputs.dry_run == false }}
+      # El puerto 80 solo esta abierto para el administrador: la prueba se hace desde dentro del servidor
+      - name: Prueba de humo (desde el propio servidor, por SSH)
         run: |
-          code=$(curl -sL -o /dev/null -w '%{http_code}' "http://$DEPLOY_HOST/login.php")
+          code=$(ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "ubuntu@$DEPLOY_HOST" 'curl -sL -o /dev/null -w "%{http_code}" http://localhost/login.php')
           echo "HTTP $code"
           [ "$code" = "200" ]
 
