@@ -54,7 +54,7 @@ Recorrido completo en [2-ansible/README.md](docs/laboratorio-ilias/2-ansible/REA
 - [x] A3. ILIAS, nginx y mantenimiento — [03-ilias-nginx-mantenimiento.md](docs/laboratorio-ilias/2-ansible/03-ilias-nginx-mantenimiento.md)
 - [x] A4. Comprobar y lint — [04-comprobar-y-lint.md](docs/laboratorio-ilias/2-ansible/04-comprobar-y-lint.md)
 - [x] A5. Plugins (addons de Surlabs; ejemplo GeoGebra) — [05-plugins.md](docs/laboratorio-ilias/2-ansible/05-plugins.md)
-- [x] A6. GitHub Actions: CI y deploy manual con aprobación — [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md)
+- [x] A6. GitHub Actions: CI y despliegue en 3 servidores (un addon distinto en cada uno), con plan visible y aprobación — [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md)
 - [x] A7. Prueba desde cero en un servidor nuevo (un solo comando) — [07-prueba-desde-cero.md](docs/laboratorio-ilias/2-ansible/07-prueba-desde-cero.md)
 - [x] A8. VPS compartido con HTTPS (otra versión, secretos propios) — [08-vps-compartido-https.md](docs/laboratorio-ilias/2-ansible/08-vps-compartido-https.md)
 - [x] A9. Repo público sin datos personales ni secretos (ver la auditoría en [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md))
