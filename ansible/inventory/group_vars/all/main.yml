@@ -50,6 +50,11 @@ backup_dir: /var/backups/ilias
 backup_keep_days: 7
 backup_hour: 2
 backup_minute: 30
+# Copia cifrada fuera del servidor con restic. Vacio = desactivada. Ejemplos: s3:s3.amazonaws.com/MI-BUCKET/ilias  |  sftp:usuario@host:/ruta
+backup_restic_repo: ""
+backup_restic_env: {}                # credenciales del destino (AWS_ACCESS_KEY_ID...): ponerlas en host_vars/<servidor>/vault.yml
+# URL "push" de un monitor (p. ej. Uptime Kuma): el script la llama al terminar bien. Es secreta: ponerla en hosts.yml, no aqui.
+backup_heartbeat_url: ""
 
 # --- Plugins (addons) de ILIAS ---
 # La lista de cada servidor va en inventory/host_vars/<servidor>/plugins.yml (se versiona: un cambio de addon es un cambio de codigo).

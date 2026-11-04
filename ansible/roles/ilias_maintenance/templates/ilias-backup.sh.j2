@@ -1,6 +1,6 @@
 #!/bin/bash
 # {{ ansible_managed }}
-# Backup de ILIAS: base de datos + ficheros + configuracion
+# Backup de ILIAS: base de datos + ficheros + configuracion + MANIFEST
 set -euo pipefail
 umask 077                                   # todo lo que se cree es solo de root
 
@@ -13,22 +13,45 @@ mkdir -p "$OUT"
 # 1) Base de datos (--single-transaction: copia consistente sin bloquear la web)
 mariadb-dump --single-transaction --routines --triggers {{ ilias_db_name }} | gzip > "$OUT/db.sql.gz"
 
-# 2) Ficheros subidos y configuracion de ILIAS
+# 2) Ficheros subidos (incluye pwsalt.txt) y configuracion de ILIAS
 tar -czf "$OUT/files.tar.gz"  -C / {{ ilias_data_dir | regex_replace('^/', '') }}
 tar -czf "$OUT/config.tar.gz" -C / {{ ilias_config_dir | regex_replace('^/', '') }}
 
-# 3) Configuracion del sistema
-tar -czf "$OUT/sistema.tar.gz" -C / \
-  etc/nginx/sites-available/ilias \
-  etc/php/{{ php_version }}/fpm/conf.d/99-ilias.ini \
-  etc/php/{{ php_version }}/fpm/pool.d/ilias.conf \
-  etc/mysql/mariadb.conf.d/60-ilias.cnf \
-  etc/cron.d/ilias
+# 3) Configuracion del sistema: lo fijo, y lo opcional solo si existe en este servidor
+SYS="etc/nginx/sites-available/ilias etc/php/{{ php_version }}/fpm/conf.d/99-ilias.ini etc/php/{{ php_version }}/fpm/pool.d/ilias.conf etc/mysql/mariadb.conf.d/60-ilias.cnf etc/cron.d/ilias"
+for f in etc/nginx/sites-available/grafana etc/ssl/cloudflare; do
+  if [ -e "/$f" ]; then SYS="$SYS $f"; fi
+done
+tar -czf "$OUT/sistema.tar.gz" -C / $SYS
 
-# 4) Sumas de verificacion para detectar corrupcion
-( cd "$OUT" && sha256sum *.gz > SHA256SUMS )
+# 4) MANIFEST: con que version se hizo. restore.yml se niega a restaurar sobre otra version.
+TABLES=$(mariadb -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ ilias_db_name }}'")
+cat > "$OUT/MANIFEST" <<EOM
+created_utc=$TS
+host=$(hostname)
+ilias_version={{ ilias_version }}
+ilias_client_id={{ ilias_client_id }}
+php_version={{ php_version }}
+db_name={{ ilias_db_name }}
+tables=$TABLES
+EOM
 
-# 5) Borrar copias antiguas
+# 5) Sumas de verificacion para detectar corrupcion
+( cd "$OUT" && sha256sum *.gz MANIFEST > SHA256SUMS )
+
+{% if backup_restic_repo | length > 0 %}
+# 6) Copia fuera del servidor, cifrada (restic)
+set -a; . /root/.restic-env; set +a
+export RESTIC_REPOSITORY="{{ backup_restic_repo }}" RESTIC_PASSWORD_FILE=/root/.restic-pass
+restic backup "$OUT" --tag ilias --host "$(hostname)" --quiet
+restic forget --tag ilias --keep-daily {{ backup_keep_days }} --keep-weekly 4 --prune --quiet
+
+{% endif %}
+# 7) Borrar copias locales antiguas
 find "$DEST" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} +
 
+{% if backup_heartbeat_url | length > 0 %}
+# 8) Aviso de que el backup termino bien (si no llega, el monitor avisa)
+curl -fsS -m 10 --retry 3 "{{ backup_heartbeat_url }}" > /dev/null
+{% endif %}
 echo "Backup OK: $OUT ($(du -sh "$OUT" | cut -f1))"
