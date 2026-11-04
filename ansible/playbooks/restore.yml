@@ -1,0 +1,170 @@
+---
+# Restaura ILIAS (base de datos y ficheros) desde un backup hecho por ilias-backup.sh.
+#
+#   ansible-playbook playbooks/restore.yml --limit SERVIDOR \
+#     -e backup_dir=/var/backups/ilias/20261104T023001Z -e confirm_restore=yes
+#
+# DESTRUYE los datos actuales de ese servidor (antes guarda una copia de seguridad de lo que hay).
+# Para recuperar un servidor perdido: primero `site.yml` (deja ILIAS instalado, vacio) y despues este playbook.
+- name: Restaurar ILIAS desde un backup
+  hosts: ilias
+  become: true
+  vars:
+    restore_safety_dir: "/var/backups/ilias-pre-restore/{{ ansible_facts.date_time.iso8601_basic_short }}"
+    restore_url_host: "{{ ilias_url.split('://')[1].split('/')[0] }}"
+    restore_url_port: "{{ 443 if ilias_url.startswith('https') else 80 }}"
+  tasks:
+    # ---------- 1. Comprobaciones: aqui todavia no se cambia nada ----------
+    - name: Frenos de seguridad
+      ansible.builtin.assert:
+        that:
+          - ansible_limit is defined
+          - confirm_restore | default('no') == 'yes'
+          - backup_dir is defined
+        fail_msg: >-
+          Restaurar destruye datos. Usa --limit SERVIDOR, -e backup_dir=RUTA_DEL_BACKUP y -e confirm_restore=yes.
+        quiet: true
+
+    - name: Comprobar que el backup tiene todo
+      ansible.builtin.stat:
+        path: "{{ backup_dir }}/{{ item }}"
+      loop: [db.sql.gz, files.tar.gz, MANIFEST, SHA256SUMS]
+      register: restore_files
+      failed_when: not restore_files.stat.exists
+
+    - name: Leer el MANIFEST
+      ansible.builtin.slurp:
+        src: "{{ backup_dir }}/MANIFEST"
+      register: restore_manifest_raw
+
+    - name: Datos del MANIFEST
+      ansible.builtin.set_fact:
+        restore_manifest_version: "{{ (restore_manifest_raw.content | b64decode) | regex_search('ilias_version=(\\S+)', '\\1') | first }}"
+        restore_manifest_client: "{{ (restore_manifest_raw.content | b64decode) | regex_search('ilias_client_id=(\\S+)', '\\1') | first }}"
+        restore_manifest_tables: "{{ (restore_manifest_raw.content | b64decode) | regex_search('tables=(\\d+)', '\\1') | first }}"
+
+    - name: La version y el cliente del backup coinciden con los de este servidor
+      ansible.builtin.assert:
+        that:
+          - restore_manifest_version == ilias_version
+          - restore_manifest_client == ilias_client_id
+        fail_msg: >-
+          El backup es de ILIAS {{ restore_manifest_version }} (cliente {{ restore_manifest_client }}) y este servidor tiene
+          {{ ilias_version }} (cliente {{ ilias_client_id }}). Una base de datos de otra version no es compatible con este codigo.
+        quiet: true
+
+    - name: Verificar las sumas de comprobacion (que no este corrupto)
+      ansible.builtin.command: sha256sum -c SHA256SUMS
+      args:
+        chdir: "{{ backup_dir }}"
+      changed_when: false
+
+    # ---------- 2. Restauracion ----------
+    - name: Restaurar
+      block:
+        - name: Directorio de la copia de seguridad previa
+          ansible.builtin.file:
+            path: "{{ restore_safety_dir }}"
+            state: directory
+            mode: "0700"
+
+        - name: Copia de seguridad de lo que hay AHORA (por si hay que volver atras)
+          ansible.builtin.shell: |
+            set -o pipefail
+            mariadb-dump --single-transaction --routines --triggers {{ ilias_db_name }} | gzip > {{ restore_safety_dir }}/db.sql.gz
+            tar -czf {{ restore_safety_dir }}/files.tar.gz -C / {{ ilias_data_dir | regex_replace('^/', '') }}
+          args:
+            executable: /bin/bash
+          changed_when: true
+
+        - name: Parar nginx y cron (que nadie escriba durante la restauracion)
+          ansible.builtin.service:
+            name: "{{ item }}"
+            state: stopped
+          loop: [nginx, cron]
+
+        - name: Vaciar la base de datos
+          ansible.mysql.mysql_db:
+            name: "{{ ilias_db_name }}"
+            state: absent
+            login_unix_socket: /run/mysqld/mysqld.sock
+
+        - name: Crear la base de datos (utf8mb3, los permisos del usuario se conservan)
+          ansible.mysql.mysql_db:
+            name: "{{ ilias_db_name }}"
+            encoding: utf8mb3
+            collation: utf8mb3_general_ci
+            state: present
+            login_unix_socket: /run/mysqld/mysqld.sock
+
+        - name: Cargar el volcado
+          ansible.mysql.mysql_db:
+            name: "{{ ilias_db_name }}"
+            state: import
+            target: "{{ backup_dir }}/db.sql.gz"
+            login_unix_socket: /run/mysqld/mysqld.sock
+
+        - name: Borrar los ficheros actuales (se restaura el estado exacto del backup)
+          ansible.builtin.file:
+            path: "{{ ilias_data_dir }}"
+            state: absent
+
+        - name: Extraer los ficheros del backup (conservan su dueno)
+          ansible.builtin.unarchive:
+            src: "{{ backup_dir }}/files.tar.gz"
+            dest: /
+            remote_src: true
+
+        - name: Dueno de los ficheros
+          ansible.builtin.file:
+            path: "{{ ilias_data_dir }}"
+            state: directory
+            recurse: true
+            owner: www-data
+            group: www-data
+
+        - name: Reiniciar PHP-FPM y arrancar nginx y cron
+          ansible.builtin.service:
+            name: "{{ item.name }}"
+            state: "{{ item.state }}"
+          loop:
+            - { name: "php{{ php_version }}-fpm", state: restarted }
+            - { name: nginx, state: started }
+            - { name: cron, state: started }
+
+        # ---------- 3. Comprobar ----------
+        # curl y no uri: hace falta --resolve para que nginx reciba el nombre del sitio (SNI) y no responda el servidor por defecto
+        - name: Prueba de humo (login.php debe dar 200)  # noqa: command-instead-of-module
+          ansible.builtin.command: >-
+            curl -sL -k -o /dev/null -w '%{http_code}'
+            --resolve '{{ restore_url_host }}:{{ restore_url_port }}:127.0.0.1' '{{ ilias_url }}/login.php'
+          register: restore_smoke
+          until: restore_smoke.stdout == '200'
+          retries: 10
+          delay: 3
+          changed_when: false
+
+        - name: Tablas en la base restaurada
+          ansible.mysql.mysql_query:
+            login_db: "{{ ilias_db_name }}"
+            login_unix_socket: /run/mysqld/mysqld.sock
+            query: "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = %s"
+            positional_args: ["{{ ilias_db_name }}"]
+          register: restore_tables
+          changed_when: false
+          check_mode: false
+
+        - name: Resultado
+          ansible.builtin.assert:
+            that: restore_tables.query_result[0][0].n | int == restore_manifest_tables | int
+            success_msg: >-
+              Restauracion correcta: {{ restore_tables.query_result[0][0].n }} tablas (las del backup), login.php responde 200.
+              La copia previa esta en {{ restore_safety_dir }}.
+            fail_msg: "Tablas restauradas: {{ restore_tables.query_result[0][0].n }}, el backup tenia {{ restore_manifest_tables }}."
+
+      rescue:
+        - name: La restauracion fallo
+          ansible.builtin.fail:
+            msg: >-
+              La restauracion fallo a medias. nginx y cron quedan PARADOS a proposito para no servir datos a medio restaurar.
+              Los datos de antes estan en {{ restore_safety_dir }}. Corrige la causa y vuelve a lanzar el playbook.

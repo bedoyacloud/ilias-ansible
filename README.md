@@ -56,6 +56,7 @@ Recorrido completo en [2-ansible/README.md](docs/laboratorio-ilias/2-ansible/REA
 - [x] A5. Plugins (addons de Surlabs; ejemplo GeoGebra) — [05-plugins.md](docs/laboratorio-ilias/2-ansible/05-plugins.md)
 - [x] A6. GitHub Actions: CI y despliegue en 3 servidores (un addon distinto en cada uno), con plan visible y aprobación — [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md)
 - [x] A7. Prueba desde cero en un servidor nuevo (un solo comando) — [07-prueba-desde-cero.md](docs/laboratorio-ilias/2-ansible/07-prueba-desde-cero.md)
+- [x] A9. Backup y restauración, manual y automatizada, con simulacro de desastre — [09-backup-y-restauracion.md](docs/laboratorio-ilias/2-ansible/09-backup-y-restauracion.md)
 - [x] A8. VPS compartido con HTTPS (otra versión, secretos propios) — [08-vps-compartido-https.md](docs/laboratorio-ilias/2-ansible/08-vps-compartido-https.md)
 - [x] A9. Repo público sin datos personales ni secretos (ver la auditoría en [06-github-actions.md](docs/laboratorio-ilias/2-ansible/06-github-actions.md))
 

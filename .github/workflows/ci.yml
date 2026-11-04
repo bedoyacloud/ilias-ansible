@@ -30,7 +30,9 @@ jobs:
 
       # No hay vault.yml ni hosts.yml en el repo (estan en .gitignore): se usa el inventario de ejemplo
       - name: syntax-check
-        run: ansible-playbook playbooks/site.yml -i inventory/hosts.example.yml --syntax-check
+        run: |
+          ansible-playbook playbooks/site.yml -i inventory/hosts.example.yml --syntax-check
+          ansible-playbook playbooks/restore.yml -i inventory/hosts.example.yml --syntax-check
 
       - name: ansible-lint
         run: ansible-lint playbooks roles

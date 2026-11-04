@@ -37,3 +37,39 @@
     hour: "{{ backup_hour }}"
     minute: "{{ backup_minute }}"
     job: "/usr/local/sbin/ilias-backup.sh >> /var/log/ilias-backup.log 2>&1"
+
+# --- Copia fuera del servidor con restic (opcional: backup_restic_repo) ---
+- name: Copia cifrada fuera del servidor (restic)
+  when: backup_restic_repo | length > 0
+  block:
+    - name: Instalar restic
+      ansible.builtin.apt:
+        name: restic
+        state: present
+        cache_valid_time: 3600
+
+    - name: Contrasena del repositorio restic (solo root)
+      ansible.builtin.copy:
+        content: "{{ vault_restic_password }}"
+        dest: /root/.restic-pass
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: Credenciales del destino (por ejemplo las de S3), solo root
+      ansible.builtin.copy:
+        content: "# Credenciales del destino de restic\n{% for k, v in backup_restic_env.items() %}{{ k }}={{ v }}\n{% endfor %}"
+        dest: /root/.restic-env
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: Inicializar el repositorio restic si no existe
+      ansible.builtin.shell: |
+        set -a; . /root/.restic-env; set +a
+        export RESTIC_REPOSITORY="{{ backup_restic_repo }}" RESTIC_PASSWORD_FILE=/root/.restic-pass
+        restic cat config >/dev/null 2>&1 || { restic init >/dev/null; echo INIT; }
+      register: ilias_maintenance_restic_init
+      changed_when: "'INIT' in ilias_maintenance_restic_init.stdout"

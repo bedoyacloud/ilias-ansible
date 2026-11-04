@@ -5,3 +5,4 @@
 vault_ilias_db_password: CAMBIAME
 vault_ilias_root_password: CAMBIAME
 vault_grafana_admin_password: CAMBIAME   # solo en el servidor del grupo monitoring
+vault_restic_password: CAMBIAME     # solo si backup_restic_repo no esta vacio
